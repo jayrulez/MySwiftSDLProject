@@ -1,0 +1,22 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "PackageStructure": ["<PackageStructure>"]
+  "SDL3-x86_64-unknown-windows-msvc-debug.module": ["<SDL3-x86_64-unknown-windows-msvc-debug.module>"]
+  "main": []
+  "test": []
+default: "main"
+nodes:
+  "F:\\Swift\\MySwiftSDLProject\\Dependencies\\SDL3\\Sources\\SDL3/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["F:\\Swift\\MySwiftSDLProject\\Dependencies\\SDL3\\Sources\\SDL3/","F:\\Swift\\MySwiftSDLProject\\Dependencies\\SDL3\\Package.swift","F:\\Swift\\MySwiftSDLProject\\Dependencies\\SDL3\\Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+

@@ -1,0 +1,27 @@
+{
+  "object" : {
+    "artifacts" : [
+
+    ],
+    "dependencies" : [
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "sdl3",
+          "kind" : "fileSystem",
+          "location" : "F:\\Swift\\MySwiftSDLProject\\Dependencies\\SDL3",
+          "name" : "SDL3"
+        },
+        "state" : {
+          "name" : "fileSystem",
+          "path" : "F:\\Swift\\MySwiftSDLProject\\Dependencies\\SDL3"
+        },
+        "subpath" : "sdl3"
+      }
+    ],
+    "prebuilts" : [
+
+    ]
+  },
+  "version" : 7
+}
