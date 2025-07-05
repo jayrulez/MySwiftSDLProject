@@ -1,4 +1,0 @@
-module SDL3 {
-    umbrella "F:\\Swift\\MySwiftSDLProject\\Dependencies\\SDL3\\Sources\\SDL3\\include"
-    export *
-}
