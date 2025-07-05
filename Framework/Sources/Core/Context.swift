@@ -80,6 +80,7 @@ public class Context
         self.subsystems = initializer.subsystems
         for subsystem in subsystems {
             subsystem.initialize(self)
+            print("Initialized subsystem: \(subsystem.name)")
         }
 
         totalTime = 0.0
@@ -117,8 +118,9 @@ public class Context
     }
 
     package func shutdown() {
-        for subsystem in subsystems {
+        for subsystem in subsystems.reversed() {
             subsystem.shutdown()
+            print("Shutdown subsystem: \(subsystem.name)")
         }
     }
 

@@ -32,7 +32,7 @@ public class SDL3WindowSystem: WindowSystem {
         let instance = Unmanaged<SDL3WindowSystem>.fromOpaque(userdata).takeUnretainedValue()
         
         if let event = event {
-            print("Event type: \(event.pointee.type)")
+            //print("Event type: \(event.pointee.type)")
         }
         // Return true to allow event, false to filter it out
         return true
