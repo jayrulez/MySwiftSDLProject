@@ -7,6 +7,8 @@ public class SDL3WindowSystem: WindowSystem {
     public private(set)var isRunning: Bool = false
     public private(set)var primaryWindow: Window?
 
+    public private(set)var inputSystem: InputSystem = SDL3InputSystem()
+
     private var startTime: DispatchTime = .now()
     private var lastFrameTime: DispatchTime = .now()
 
