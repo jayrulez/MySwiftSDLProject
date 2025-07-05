@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:SwiftSDL}/Samples",
+            "name": "Debug Sandbox (Samples)",
+            "program": "${workspaceFolder:SwiftSDL}/Samples/.build/debug/Sandbox",
+            "preLaunchTask": "swift: Build Debug Sandbox (Samples)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:SwiftSDL}/Samples",
+            "name": "Release Sandbox (Samples)",
+            "program": "${workspaceFolder:SwiftSDL}/Samples/.build/release/Sandbox",
+            "preLaunchTask": "swift: Build Release Sandbox (Samples)"
+        }
+    ]
+}

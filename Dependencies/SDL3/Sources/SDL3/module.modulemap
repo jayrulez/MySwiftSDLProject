@@ -1,0 +1,5 @@
+module SDL3 [system][extern_c] {
+    header "include/SDL3/SDL.h"
+    link "SDL3"
+    export *
+}
