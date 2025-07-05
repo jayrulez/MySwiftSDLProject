@@ -1,38 +1,23 @@
 open class Subsystem {
-    public let updatePriority: Int
+    public private(set) var name: String;
+    
+    public private(set) var context: Context?;
 
-    public init(updatePriority: Int = 0) {
-        self.updatePriority = updatePriority
+    public init(_ name: String) {
+        self.name = name
+        self.context = nil
     }
 
     package func initialize(_ context: Context) {
+        self.context = context
         onInitialize(context)
     }
 
     package func shutdown() {
         onShutdown()
-    }
-
-    package func preUpdate(_ updateTime: UpdateTime) {
-        onPreUpdate(updateTime)
-    }
-
-    package func variableUpdate(_ updateTime: UpdateTime) {
-        onVariableUpdate(updateTime)
-    }
-
-    package func fixedUpdate(_ updateTime: UpdateTime) {
-        onFixedUpdate(updateTime)
-    }
-
-    package func postUpdate(_ updateTime: UpdateTime) {
-        onPostUpdate(updateTime)
+        self.context = nil
     }
 
     open func onInitialize(_ context: Context) {}
     open func onShutdown() {}
-    open func onPreUpdate(_ updateTime: UpdateTime) {}
-    open func onVariableUpdate(_ updateTime: UpdateTime) {}
-    open func onFixedUpdate(_ updateTime: UpdateTime) {}
-    open func onPostUpdate(_ updateTime: UpdateTime) {}
 }
