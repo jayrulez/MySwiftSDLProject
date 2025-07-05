@@ -4,18 +4,18 @@
             "type": "swift",
             "request": "launch",
             "args": [],
-            "cwd": "${workspaceFolder:SwiftSDL}/Samples",
+            "cwd": "${workspaceFolder:MySwiftSDLProject}/Samples",
             "name": "Debug Sandbox (Samples)",
-            "program": "${workspaceFolder:SwiftSDL}/Samples/.build/debug/Sandbox",
+            "program": "${workspaceFolder:MySwiftSDLProject}/Samples/.build/debug/Sandbox",
             "preLaunchTask": "swift: Build Debug Sandbox (Samples)"
         },
         {
             "type": "swift",
             "request": "launch",
             "args": [],
-            "cwd": "${workspaceFolder:SwiftSDL}/Samples",
+            "cwd": "${workspaceFolder:MySwiftSDLProject}/Samples",
             "name": "Release Sandbox (Samples)",
-            "program": "${workspaceFolder:SwiftSDL}/Samples/.build/release/Sandbox",
+            "program": "${workspaceFolder:MySwiftSDLProject}/Samples/.build/release/Sandbox",
             "preLaunchTask": "swift: Build Release Sandbox (Samples)"
         }
     ]

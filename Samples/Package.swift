@@ -11,12 +11,17 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(name: "SDL3", path: "../Dependencies/SDL3")
+        .package(name: "SDL3", path: "../Dependencies/SDL3"),
+        .package(name: "Sedulous", path: "../Framework"),
     ],
     targets: [
         .executableTarget(
             name: "Sandbox",
-            dependencies: ["SDL3"],
+            dependencies: [
+                "SDL3",
+                .product(name: "SedulousRuntime", package: "Sedulous"), 
+                .product(name: "SedulousPlatformSDL3", package: "Sedulous"),
+            ],
             cSettings: [
                 .headerSearchPath("../Dependencies/SDL3/Sources/SDL3/include"),
                 .define("SDL_MAIN_HANDLED")

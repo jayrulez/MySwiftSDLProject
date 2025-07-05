@@ -36,6 +36,11 @@ let package = Package(
                 .linkedLibrary("SDL3"),
             ]
         ),
-        .target(name: "SedulousRuntime", path: "Sources/Runtime"),
+        .target(name: "SedulousRuntime",
+            dependencies: [
+                "SedulousPlatform",
+                "SedulousCore",
+            ], 
+            path: "Sources/Runtime"),
     ]
 )
