@@ -44,6 +44,7 @@
       "otherArguments" : [
         "-target",
         "x86_64-unknown-windows-msvc",
+        "-v",
         "-enable-batch-mode",
         "-index-store-path",
         "F:\\Swift\\MySwiftSDLProject\\Samples\\.build\\x86_64-unknown-windows-msvc\\debug\\index\\store",
@@ -131,6 +132,7 @@
       "F:\\Swift\\MySwiftSDLProject\\Samples\\.build\\x86_64-unknown-windows-msvc\\debug\\Modules",
       "-target",
       "x86_64-unknown-windows-msvc",
+      "-v",
       "-enable-batch-mode",
       "-index-store-path",
       "F:\\Swift\\MySwiftSDLProject\\Samples\\.build\\x86_64-unknown-windows-msvc\\debug\\index\\store",

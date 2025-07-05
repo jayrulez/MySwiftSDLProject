@@ -21,8 +21,7 @@ let package = Package(
             ],
             linkerSettings: [
                 .linkedLibrary("SDL3"),
-                .unsafeFlags(["-Llib", "-ISources/SDL3/include"
-], .when(platforms: [.windows]))
+                .unsafeFlags(["-L", "Sources/SDL3/lib/x64"]),
             ]
         ),
     ]
