@@ -20,4 +20,17 @@ open class Subsystem {
 
     open func onInitialize(_ context: Context) {}
     open func onShutdown() {}
+
+    package func sceneAdded(_ scene: Scene) {
+        onSceneAdded(scene)
+    }
+    package func sceneRemoved(_ scene: Scene) {
+        OnSceneRemoved(scene)
+    }
+
+    open func onSceneAdded(_ scene: Scene) {
+    }
+
+    open func onSceneRemoved(_ scene: Scene) {
+    }
 }
