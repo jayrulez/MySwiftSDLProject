@@ -5,7 +5,9 @@ import PackageDescription
 let package = Package(
     name: "Sedulous",
     products: [
-        .library(name: "SedulousCore", targets: ["SedulousCore"]),
+        .library(name: "SedulousEngine", targets: ["SedulousEngine"]),
+        .library(name: "SedulousJobs", targets: ["SedulousJobs"]),
+        .library(name: "SedulousResources", targets: ["SedulousResources"]),
         .library(name: "SedulousFoundation", targets: ["SedulousFoundation"]),
         .library(name: "SedulousPlatform", targets: ["SedulousPlatform"]),
         .library(name: "SedulousPlatformSDL3", targets: ["SedulousPlatformSDL3"]),
@@ -19,7 +21,9 @@ let package = Package(
         .package(name: "SDL3", path: "../Dependencies/SDL3"),
     ],
     targets: [
-        .target(name: "SedulousCore", dependencies: ["SedulousFoundation"], path: "Sources/Core"),
+        .target(name: "SedulousEngine", dependencies: ["SedulousFoundation", "SedulousJobs", "SedulousResources"], path: "Sources/Engine"),
+        .target(name: "SedulousJobs", path: "Sources/Jobs"),
+        .target(name: "SedulousResources", dependencies: ["SedulousJobs"], path: "Sources/Resources"),
         .target(name: "SedulousFoundation", path: "Sources/Foundation"),
         .target(name: "SedulousPlatform", path: "Sources/Platform"),
         .target(name: "SedulousPlatformSDL3", 
@@ -41,12 +45,12 @@ let package = Package(
         ),
         .target(name: "SedulousAudio",
             dependencies: [
-                "SedulousCore",
+                "SedulousEngine",
             ], 
             path: "Sources/Audio"),
         .target(name: "SedulousAudioSDL3",
             dependencies: [
-                "SedulousCore",
+                "SedulousEngine",
                 "SedulousAudio",
                 "SDL3",
             ], 
@@ -64,18 +68,18 @@ let package = Package(
         ),
         .target(name: "SedulousInput",
             dependencies: [
-                "SedulousCore",
+                "SedulousEngine",
             ], 
             path: "Sources/Input"),
         .target(name: "SedulousRenderer",
             dependencies: [
-                "SedulousCore",
+                "SedulousEngine",
             ], 
             path: "Sources/Renderer"),
         .target(name: "SedulousRuntime",
             dependencies: [
                 "SedulousPlatform",
-                "SedulousCore",
+                "SedulousEngine",
                 "SedulousAudio",
                 "SedulousAudioSDL3",
                 "SedulousInput",

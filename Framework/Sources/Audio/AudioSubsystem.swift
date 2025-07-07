@@ -1,4 +1,4 @@
-import SedulousCore
+import SedulousEngine
 
 open class AudioSubsystem: Subsystem {
     package init() {

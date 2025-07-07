@@ -1,5 +1,5 @@
 import SedulousPlatform
-import SedulousCore
+import SedulousEngine
 
 import SedulousAudioSDL3
 import SedulousInput

@@ -1,5 +1,8 @@
 import Foundation
 
+import SedulousJobs
+import SedulousResources
+
 public typealias ContextInitializingCallback = (_ initializer: ContextInitializer) -> Void;
 public typealias ContextInitializedCallback = (_ context: Context) -> Void;
 public typealias ContextShuttingDownCallback = (_ context: Context) -> Void;
@@ -38,6 +41,10 @@ public typealias RegisteredUpdateFunctionID = UUID
 
 public class Context
 {
+    public private(set) var scenes: SceneSystem
+    public private(set) var jobs: JobSystem  
+    public private(set) var resources: ResourceSystem
+
     package var subsystems: [Subsystem] = []
 
     private var accumulator: Double = 0.0
@@ -58,6 +65,10 @@ public class Context
 	private var updateFunctionsToUnregister: Array<RegisteredUpdateFunctionInfo> = .init()
 
     package init() {
+        jobs = JobSystem()
+        resources = ResourceSystem(jobSystem: jobs)
+        scenes = SceneSystem()
+
         for stage: ContextUpdateStage in ContextUpdateStage.allCases
         {
             updateFunctions[stage] = .init();
@@ -77,6 +88,10 @@ public class Context
     }
 
     package func initialize(_ initializer: ContextInitializer) {
+        jobs.startup()
+        resources.startup()
+        scenes.startup()
+
         self.subsystems = initializer.subsystems
         for subsystem in subsystems {
             subsystem.initialize(self)
@@ -88,6 +103,9 @@ public class Context
     }
 
     package func update(_ updateTime: UpdateTime) {
+        jobs.update()
+        resources.update()
+
         let elapsed = updateTime.elapsedTime
         totalTime = updateTime.totalTime
 
@@ -108,6 +126,10 @@ public class Context
             accumulator -= fixedTimeStep
         }
 
+        do {
+            scenes.update(updateTime)
+        }
+
         // Variable update
         let variableUpdateInfo = ContextUpdateInfo(context: self, time: updateTime)
         runUpdateFunctions(stage: .variableUpdate, info: variableUpdateInfo)
@@ -122,6 +144,10 @@ public class Context
             subsystem.shutdown()
             print("Shutdown subsystem: \(subsystem.name)")
         }
+
+        scenes.shutdown()
+        resources.shutdown()
+        jobs.shutdown()
     }
 
     public func registerUpdateFunction(info: ContextUpdateFunctionInfo) -> RegisteredUpdateFunctionInfo {

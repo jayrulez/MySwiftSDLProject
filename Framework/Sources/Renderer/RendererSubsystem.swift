@@ -1,4 +1,4 @@
-import SedulousCore
+import SedulousEngine
 
 public class RendererSubsystem: Subsystem {
     public init() {
