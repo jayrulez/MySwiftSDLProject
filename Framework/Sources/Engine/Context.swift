@@ -118,6 +118,10 @@ public class Context
         let preUpdateInfo = ContextUpdateInfo(context: self, time: updateTime)
         runUpdateFunctions(stage: .preUpdate, info: preUpdateInfo)
 
+        do {
+            scenes.update(updateTime)
+        }
+
         // Fixed update
         accumulator += elapsed
         while accumulator >= fixedTimeStep {
@@ -125,10 +129,6 @@ public class Context
             let fixedUpdateInfo = ContextUpdateInfo(context: self, time: fixedUpdateTime)
             runUpdateFunctions(stage: .fixedUpdate, info: fixedUpdateInfo)
             accumulator -= fixedTimeStep
-        }
-
-        do {
-            scenes.update(updateTime)
         }
 
         // Variable update
