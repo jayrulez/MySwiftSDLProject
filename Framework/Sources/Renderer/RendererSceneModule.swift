@@ -5,11 +5,11 @@ public class RendererSceneModule: SceneModule {
         return "Renderer"
     }
 
-    override func onAttached(to scene: Scene) {
+    open override func onAttached(to scene: Scene) {
         super.onAttached(to: scene)
     }
 
-    override func onDetached() {
+    open override func onDetached() {
         super.onDetached()
     }
 }

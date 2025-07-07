@@ -25,7 +25,7 @@ open class Subsystem {
         onSceneAdded(scene)
     }
     package func sceneRemoved(_ scene: Scene) {
-        OnSceneRemoved(scene)
+        onSceneRemoved(scene)
     }
 
     open func onSceneAdded(_ scene: Scene) {
