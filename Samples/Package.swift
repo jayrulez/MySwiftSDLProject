@@ -21,6 +21,7 @@ let package = Package(
                 "SDL3",
                 .product(name: "SedulousRuntime", package: "Sedulous"), 
                 .product(name: "SedulousPlatformSDL3", package: "Sedulous"),
+                .product(name: "SedulousRenderer", package: "Sedulous"),
             ],
             cSettings: [
                 .headerSearchPath("../Dependencies/SDL3/Sources/SDL3/include"),

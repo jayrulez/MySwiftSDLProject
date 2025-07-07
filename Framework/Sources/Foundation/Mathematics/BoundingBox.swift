@@ -42,4 +42,17 @@ public struct BoundingBox: Hashable, Codable, Equatable, Sendable {
         min.y <= other.max.y && max.y >= other.min.y &&
         min.z <= other.max.z && max.z >= other.min.z
     }
+
+    public mutating func expand(_ point: Vector3) {
+        min = Vector3(
+            Swift.min(min.x, point.x),
+            Swift.min(min.y, point.y),
+            Swift.min(min.z, point.z)
+        )
+        max = Vector3(
+            Swift.max(max.x, point.x),
+            Swift.max(max.y, point.y),
+            Swift.max(max.z, point.z)
+        )
+    }
 }

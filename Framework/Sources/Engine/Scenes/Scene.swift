@@ -6,6 +6,9 @@ public class Scene {
     private var modules: [SceneModule] = []
     private var queries: [EntityQuery] = []
 
+    public init() {
+    }
+
     @discardableResult
     public func addModule<T: SceneModule>(_ module: T) -> T {
         if getModule(ofType: T.self) != nil {
@@ -37,6 +40,7 @@ public class Scene {
 
     // MARK: - Entity Management
     
+    @discardableResult
     public func createEntity(name: String = "Entity") -> Entity {
         let entity = Entity(name: name, scene: self)
         entities[entity.id] = entity

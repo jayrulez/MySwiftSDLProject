@@ -5,6 +5,8 @@ public class RendererSceneModule: SceneModule {
         return "Renderer"
     }
 
+    private var meshes: [StaticMeshComponent] = []
+
     open override func onAttached(to scene: Scene) {
         super.onAttached(to: scene)
     }

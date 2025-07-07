@@ -17,6 +17,7 @@ let package = Package(
         .library(name: "SedulousAudioSDL3", targets: ["SedulousAudioSDL3"]),
         .library(name: "SedulousInput", targets: ["SedulousInput"]),
         .library(name: "SedulousRenderer", targets: ["SedulousRenderer"]),
+        .library(name: "SedulousGeometry", targets: ["SedulousGeometry"]),
     ],
     dependencies: [
         .package(name: "SDL3", path: "../Dependencies/SDL3"),
@@ -92,12 +93,21 @@ let package = Package(
             dependencies: [
                 "SedulousEngine",
             ], 
-            path: "Sources/Input"),
+            path: "Sources/Input"
+        ),
         .target(name: "SedulousRenderer",
             dependencies: [
                 "SedulousEngine",
+                "SedulousGeometry",
             ], 
-            path: "Sources/Renderer"),
+            path: "Sources/Renderer"
+        ),
+        .target(name: "SedulousGeometry",
+            dependencies: [
+                "SedulousFoundation",
+            ], 
+            path: "Sources/Geometry"
+        ),
         .target(name: "SedulousRuntime",
             dependencies: [
                 "SedulousPlatform",
@@ -107,6 +117,7 @@ let package = Package(
                 "SedulousInput",
                 "SedulousRenderer",
             ], 
-            path: "Sources/Runtime"),
+            path: "Sources/Runtime"
+        ),
     ]
 )

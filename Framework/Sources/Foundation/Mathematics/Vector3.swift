@@ -107,4 +107,8 @@ public extension Vector3 {
         let uuv = Vector3.cross(qvec, uv)
         return vector + ((uv * quaternion.w) + uuv) * 2.0
     }
+
+    static func normalize(_ vector: Vector3) -> Vector3 {
+        return vector.normalized
+    }
 }
