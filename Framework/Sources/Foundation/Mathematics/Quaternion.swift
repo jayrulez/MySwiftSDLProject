@@ -1,46 +1,46 @@
 import Foundation
 
-struct Quaternion: Hashable, Codable, Equatable {
-    var x: Float
-    var y: Float
-    var z: Float
-    var w: Float
+public struct Quaternion: Hashable, Codable, Equatable, Sendable {
+    public var x: Float
+    public var y: Float
+    public var z: Float
+    public var w: Float
     
-    init(_ x: Float, _ y: Float, _ z: Float, _ w: Float) {
+    public init(_ x: Float, _ y: Float, _ z: Float, _ w: Float) {
         self.x = x
         self.y = y
         self.z = z
         self.w = w
     }
     
-    init(x: Float, y: Float, z: Float, w: Float) {
+    public init(x: Float, y: Float, z: Float, w: Float) {
         self.x = x
         self.y = y
         self.z = z
         self.w = w
     }
     
-    static let identity = Quaternion(0, 0, 0, 1)
+    public static let identity = Quaternion(0, 0, 0, 1)
     
-    var length: Float {
+    public var length: Float {
         sqrt(x * x + y * y + z * z + w * w)
     }
     
-    var lengthSquared: Float {
+    public var lengthSquared: Float {
         x * x + y * y + z * z + w * w
     }
     
-    var normalized: Quaternion {
+    public var normalized: Quaternion {
         let len = length
         return len > 0 ? Quaternion(x / len, y / len, z / len, w / len) : Quaternion.identity
     }
     
-    var conjugate: Quaternion {
+    public var conjugate: Quaternion {
         Quaternion(-x, -y, -z, w)
     }
 }
 
-extension Quaternion {
+public extension Quaternion {
     static func *(lhs: Quaternion, rhs: Quaternion) -> Quaternion {
         Quaternion(
             lhs.w * rhs.x + lhs.x * rhs.w + lhs.y * rhs.z - lhs.z * rhs.y,
@@ -85,5 +85,60 @@ extension Quaternion {
                 scale1 * start.w + scale2 * end.w
             )
         }
+    }
+
+    static func createFromRotationMatrix(_ matrix: Matrix4x4) -> Quaternion {
+        let trace = matrix.m11 + matrix.m22 + matrix.m33
+        
+        if trace > 0 {
+            let s = sqrt(trace + 1.0) * 2
+            return Quaternion(
+                (matrix.m32 - matrix.m23) / s,
+                (matrix.m13 - matrix.m31) / s,
+                (matrix.m21 - matrix.m12) / s,
+                0.25 * s
+            )
+        } else if matrix.m11 > matrix.m22 && matrix.m11 > matrix.m33 {
+            let s = sqrt(1.0 + matrix.m11 - matrix.m22 - matrix.m33) * 2
+            return Quaternion(
+                0.25 * s,
+                (matrix.m12 + matrix.m21) / s,
+                (matrix.m13 + matrix.m31) / s,
+                (matrix.m32 - matrix.m23) / s
+            )
+        } else if matrix.m22 > matrix.m33 {
+            let s = sqrt(1.0 + matrix.m22 - matrix.m11 - matrix.m33) * 2
+            return Quaternion(
+                (matrix.m12 + matrix.m21) / s,
+                0.25 * s,
+                (matrix.m23 + matrix.m32) / s,
+                (matrix.m13 - matrix.m31) / s
+            )
+        } else {
+            let s = sqrt(1.0 + matrix.m33 - matrix.m11 - matrix.m22) * 2
+            return Quaternion(
+                (matrix.m13 + matrix.m31) / s,
+                (matrix.m23 + matrix.m32) / s,
+                0.25 * s,
+                (matrix.m21 - matrix.m12) / s
+            )
+        }
+    }
+
+    static func createFromEuler(_ euler: Vector3) -> Quaternion {
+        // ZYX Euler angle conversion
+        let cy = cos(euler.z * 0.5)
+        let sy = sin(euler.z * 0.5)
+        let cp = cos(euler.y * 0.5)
+        let sp = sin(euler.y * 0.5)
+        let cr = cos(euler.x * 0.5)
+        let sr = sin(euler.x * 0.5)
+        
+        return Quaternion(
+            sr * cp * cy - cr * sp * sy,
+            cr * sp * cy + sr * cp * sy,
+            cr * cp * sy - sr * sp * cy,
+            cr * cp * cy + sr * sp * sy
+        )
     }
 }

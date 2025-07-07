@@ -1,66 +1,66 @@
 import Foundation
 
-struct Vector3: Hashable, Codable, Equatable {
-    var x: Float
-    var y: Float
-    var z: Float
+public struct Vector3: Hashable, Codable, Equatable, Sendable {
+    public var x: Float
+    public var y: Float
+    public var z: Float
     
-    init(_ x: Float, _ y: Float, _ z: Float) {
+    public init(_ x: Float, _ y: Float, _ z: Float) {
         self.x = x
         self.y = y
         self.z = z
     }
     
-    init(x: Float, y: Float, z: Float) {
+    public init(x: Float, y: Float, z: Float) {
         self.x = x
         self.y = y
         self.z = z
     }
     
-    init(_ vector2: Vector2, _ z: Float) {
+    public init(_ vector2: Vector2, _ z: Float) {
         self.x = vector2.x
         self.y = vector2.y
         self.z = z
     }
     
-    static let zero = Vector3(0, 0, 0)
-    static let one = Vector3(1, 1, 1)
-    static let unitX = Vector3(1, 0, 0)
-    static let unitY = Vector3(0, 1, 0)
-    static let unitZ = Vector3(0, 0, 1)
-    static let up = Vector3(0, 1, 0)
-    static let down = Vector3(0, -1, 0)
-    static let right = Vector3(1, 0, 0)
-    static let left = Vector3(-1, 0, 0)
-    static let forward = Vector3(0, 0, -1)
-    static let backward = Vector3(0, 0, 1)
+    public static let zero = Vector3(0, 0, 0)
+    public static let one = Vector3(1, 1, 1)
+    public static let unitX = Vector3(1, 0, 0)
+    public static let unitY = Vector3(0, 1, 0)
+    public static let unitZ = Vector3(0, 0, 1)
+    public static let up = Vector3(0, 1, 0)
+    public static let down = Vector3(0, -1, 0)
+    public static let right = Vector3(1, 0, 0)
+    public static let left = Vector3(-1, 0, 0)
+    public static let forward = Vector3(0, 0, -1)
+    public static let backward = Vector3(0, 0, 1)
     
-    var length: Float {
+    public var length: Float {
         sqrt(x * x + y * y + z * z)
     }
     
-    var lengthSquared: Float {
+    public var lengthSquared: Float {
         x * x + y * y + z * z
     }
     
-    var normalized: Vector3 {
+    public var normalized: Vector3 {
         let len = length
         return len > 0 ? Vector3(x / len, y / len, z / len) : Vector3.zero
     }
     
     // Convert to Size3
-    var toSize3: Size3 {
+    public var toSize3: Size3 {
         Size3(Int(x), Int(y), Int(z))
     }
     
     // Convert to Vector2
-    var xy: Vector2 {
+    public var xy: Vector2 {
         Vector2(x, y)
     }
 }
 
 
-extension Vector3 {
+public extension Vector3 {
     static func +(lhs: Vector3, rhs: Vector3) -> Vector3 {
         Vector3(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z)
     }
@@ -99,5 +99,12 @@ extension Vector3 {
     
     static func lerp(_ start: Vector3, _ end: Vector3, _ t: Float) -> Vector3 {
         start + (end - start) * t
+    }
+
+    static func transform(_ vector: Vector3, _ quaternion: Quaternion) -> Vector3 {
+        let qvec = Vector3(quaternion.x, quaternion.y, quaternion.z)
+        let uv = Vector3.cross(qvec, vector)
+        let uuv = Vector3.cross(qvec, uv)
+        return vector + ((uv * quaternion.w) + uuv) * 2.0
     }
 }

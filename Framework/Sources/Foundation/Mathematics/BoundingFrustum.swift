@@ -1,24 +1,24 @@
-struct BoundingFrustum: Hashable, Codable, Equatable {
-    var planes: [Plane] // 6 planes: near, far, left, right, top, bottom
+public struct BoundingFrustum: Hashable, Codable, Equatable, Sendable {
+    public var planes: [Plane] // 6 planes: near, far, left, right, top, bottom
     
-    init(_ planes: [Plane]) {
+    public init(_ planes: [Plane]) {
         precondition(planes.count == 6, "BoundingFrustum requires exactly 6 planes")
         self.planes = planes
     }
     
-    init(matrix: Matrix4x4) {
+    public init(matrix: Matrix4x4) {
         // Extract frustum planes from view-projection matrix
         self.planes = BoundingFrustum.extractPlanesFromMatrix(matrix)
     }
     
-    var near: Plane { planes[0] }
-    var far: Plane { planes[1] }
-    var left: Plane { planes[2] }
-    var right: Plane { planes[3] }
-    var top: Plane { planes[4] }
-    var bottom: Plane { planes[5] }
+    public var near: Plane { planes[0] }
+    public var far: Plane { planes[1] }
+    public var left: Plane { planes[2] }
+    public var right: Plane { planes[3] }
+    public var top: Plane { planes[4] }
+    public var bottom: Plane { planes[5] }
     
-    func contains(_ point: Vector3) -> Bool {
+    public func contains(_ point: Vector3) -> Bool {
         for plane in planes {
             if plane.distanceToPoint(point) < 0 {
                 return false
@@ -27,7 +27,7 @@ struct BoundingFrustum: Hashable, Codable, Equatable {
         return true
     }
     
-    func intersects(_ sphere: BoundingSphere) -> Bool {
+    public func intersects(_ sphere: BoundingSphere) -> Bool {
         for plane in planes {
             if plane.distanceToPoint(sphere.center) < -sphere.radius {
                 return false

@@ -1,13 +1,16 @@
 import Foundation
 
-struct Matrix4x4: Hashable, Codable, Equatable {
+public struct Matrix4x4: Hashable, Codable, Equatable, Sendable {
     // Column-major storage
-    var m11: Float; var m21: Float; var m31: Float; var m41: Float
-    var m12: Float; var m22: Float; var m32: Float; var m42: Float
-    var m13: Float; var m23: Float; var m33: Float; var m43: Float
-    var m14: Float; var m24: Float; var m34: Float; var m44: Float
+    public var m11: Float; public var m21: Float; public var m31: Float; public var m41: Float
+
+    public var m12: Float; public var m22: Float; public var m32: Float; public var m42: Float
+
+    public var m13: Float; public var m23: Float; public var m33: Float; public var m43: Float
+
+    public var m14: Float; public var m24: Float; public var m34: Float; public var m44: Float
     
-    init(_ m11: Float, _ m12: Float, _ m13: Float, _ m14: Float,
+    public init(_ m11: Float, _ m12: Float, _ m13: Float, _ m14: Float,
          _ m21: Float, _ m22: Float, _ m23: Float, _ m24: Float,
          _ m31: Float, _ m32: Float, _ m33: Float, _ m34: Float,
          _ m41: Float, _ m42: Float, _ m43: Float, _ m44: Float) {
@@ -17,14 +20,14 @@ struct Matrix4x4: Hashable, Codable, Equatable {
         self.m41 = m41; self.m42 = m42; self.m43 = m43; self.m44 = m44
     }
     
-    static let identity = Matrix4x4(
+    public static let identity = Matrix4x4(
         1, 0, 0, 0,
         0, 1, 0, 0,
         0, 0, 1, 0,
         0, 0, 0, 1
     )
     
-    var translation: Vector3 {
+    public var translation: Vector3 {
         get { Vector3(m41, m42, m43) }
         set {
             m41 = newValue.x
@@ -34,7 +37,7 @@ struct Matrix4x4: Hashable, Codable, Equatable {
     }
 }
 
-extension Matrix4x4 {
+public extension Matrix4x4 {
     static func *(lhs: Matrix4x4, rhs: Matrix4x4) -> Matrix4x4 {
         Matrix4x4(
             lhs.m11 * rhs.m11 + lhs.m12 * rhs.m21 + lhs.m13 * rhs.m31 + lhs.m14 * rhs.m41,
@@ -136,6 +139,34 @@ extension Matrix4x4 {
             xAxis.y, yAxis.y, zAxis.y, 0,
             xAxis.z, yAxis.z, zAxis.z, 0,
             -Vector3.dot(xAxis, eye), -Vector3.dot(yAxis, eye), -Vector3.dot(zAxis, eye), 1
+        )
+    }
+
+    static func createFromQuaternion(_ quaternion: Quaternion) -> Matrix4x4 {
+        let xx = quaternion.x * quaternion.x
+        let yy = quaternion.y * quaternion.y
+        let zz = quaternion.z * quaternion.z
+        let xy = quaternion.x * quaternion.y
+        let wz = quaternion.w * quaternion.z
+        let xz = quaternion.x * quaternion.z
+        let wy = quaternion.w * quaternion.y
+        let yz = quaternion.y * quaternion.z
+        let wx = quaternion.w * quaternion.x
+        
+        return Matrix4x4(
+            1.0 - 2.0 * (yy + zz), 2.0 * (xy + wz), 2.0 * (xz - wy), 0,
+            2.0 * (xy - wz), 1.0 - 2.0 * (xx + zz), 2.0 * (yz + wx), 0,
+            2.0 * (xz + wy), 2.0 * (yz - wx), 1.0 - 2.0 * (xx + yy), 0,
+            0, 0, 0, 1
+        )
+    }
+    
+    static func transform(_ vector: Vector4, _ matrix: Matrix4x4) -> Vector4 {
+        return Vector4(
+            vector.x * matrix.m11 + vector.y * matrix.m21 + vector.z * matrix.m31 + vector.w * matrix.m41,
+            vector.x * matrix.m12 + vector.y * matrix.m22 + vector.z * matrix.m32 + vector.w * matrix.m42,
+            vector.x * matrix.m13 + vector.y * matrix.m23 + vector.z * matrix.m33 + vector.w * matrix.m43,
+            vector.x * matrix.m14 + vector.y * matrix.m24 + vector.z * matrix.m34 + vector.w * matrix.m44
         )
     }
 }

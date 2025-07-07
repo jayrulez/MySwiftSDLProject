@@ -1,26 +1,26 @@
-struct Point2: Hashable, Codable, Equatable {
-    var x: Int
-    var y: Int
+public struct Point2: Hashable, Codable, Equatable, Sendable {
+    public var x: Int
+    public var y: Int
     
-    init(_ x: Int, _ y: Int) {
+    public init(_ x: Int, _ y: Int) {
         self.x = x
         self.y = y
     }
     
-    init(x: Int, y: Int) {
+    public init(x: Int, y: Int) {
         self.x = x
         self.y = y
     }
     
-    static let zero = Point2(0, 0)
+    public static let zero = Point2(0, 0)
     
     // Convert to Vector2
-    var toVector2: Vector2 {
+    public var toVector2: Vector2 {
         Vector2(Float(x), Float(y))
     }
     
     // Convert to Point2F
-    var toPoint2F: Point2F {
+    public var toPoint2F: Point2F {
         Point2F(Float(x), Float(y))
     }
 }

@@ -2,14 +2,12 @@ import Foundation
 
 public class Scene {
     public let id = UUID()
-    //public var name: String
     private var entities: [UUID: Entity] = [:]
     private var modules: [SceneModule] = []
     private var queries: [EntityQuery] = []
 
     @discardableResult
     public func addModule<T: SceneModule>(_ module: T) -> T {
-        // Check if module of this type already exists
         if getModule(ofType: T.self) != nil {
             return getModule(ofType: T.self)!
         }
@@ -18,7 +16,6 @@ public class Scene {
         module.scene = self
         module.attach(to: self)
 
-        // Initialize with existing entities
         for entity in entities.values {
             module.entityCreated(entity)
         }
@@ -44,12 +41,10 @@ public class Scene {
         let entity = Entity(name: name, scene: self)
         entities[entity.id] = entity
         
-        // Notify modules
         for module in modules {
             module.entityCreated(entity)
         }
         
-        // Update queries
         for query in queries {
             query.checkEntity(entity)
         }
@@ -60,12 +55,19 @@ public class Scene {
     public func destroyEntity(_ entity: Entity) {
         guard entities[entity.id] != nil else { return }
         
-        // Notify modules
+        // Remove from hierarchy
+        entity.removeFromParent()
+        
+        // Destroy all children recursively
+        let children = entity.getAllChildren()
+        for child in children {
+            destroyEntity(child)
+        }
+        
         for module in modules {
             module.entityDestroyed(entity)
         }
         
-        // Update queries
         for query in queries {
             query.removeEntity(entity)
         }
@@ -95,6 +97,38 @@ public class Scene {
         }
     }
     
+    // MARK: - Scene Update
+    
+    public func update(_ updateTime: UpdateTime) {
+        // Update all transforms
+        updateTransforms()
+        
+        // Reset transform changed flags
+        resetTransformChangedFlags()
+    }
+    
+    private func updateTransforms() {
+        // Update transforms in hierarchy order (parents before children)
+        let rootEntities = entities.values.filter { $0.parent == nil }
+        for entity in rootEntities {
+            updateTransformHierarchy(entity)
+        }
+    }
+    
+    private func updateTransformHierarchy(_ entity: Entity) {
+        entity.transform.updateTransform()
+        
+        for child in entity.children {
+            updateTransformHierarchy(child)
+        }
+    }
+    
+    private func resetTransformChangedFlags() {
+        for entity in entities.values {
+            entity.transform.resetChangedFlag()
+        }
+    }
+    
     // MARK: - Internal notifications
     
     internal func componentAdded(to entity: Entity, component: any Component) {
@@ -102,7 +136,6 @@ public class Scene {
             module.componentAdded(to: entity, component: component)
         }
         
-        // Update queries
         for query in queries {
             query.checkEntity(entity)
         }
@@ -113,13 +146,13 @@ public class Scene {
             module.componentRemoved(from: entity, componentType: componentType)
         }
         
-        // Update queries
         for query in queries {
             query.checkEntity(entity)
         }
     }
     
-    public func update(_ updateTime: UpdateTime) {
-        // todo: entity updates, transforms, etc...
+    internal func hierarchyChanged(entity: Entity) {
+        // Notify modules of hierarchy changes if needed
+        // This could be useful for modules that care about parent-child relationships
     }
 }
