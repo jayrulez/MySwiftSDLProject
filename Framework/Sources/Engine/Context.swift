@@ -1,5 +1,6 @@
 import Foundation
 
+import SedulousFoundation
 import SedulousJobs
 import SedulousResources
 

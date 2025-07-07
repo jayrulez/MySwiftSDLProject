@@ -17,6 +17,24 @@
             "name": "Release Sandbox (Samples)",
             "program": "${workspaceFolder:MySwiftSDLProject}/Samples/.build/release/Sandbox",
             "preLaunchTask": "swift: Build Release Sandbox (Samples)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:MySwiftSDLProject}/Framework",
+            "name": "Debug SedulousMacros (Framework)",
+            "program": "${workspaceFolder:MySwiftSDLProject}/Framework/.build/debug/SedulousMacros",
+            "preLaunchTask": "swift: Build Debug SedulousMacros (Framework)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:MySwiftSDLProject}/Framework",
+            "name": "Release SedulousMacros (Framework)",
+            "program": "${workspaceFolder:MySwiftSDLProject}/Framework/.build/release/SedulousMacros",
+            "preLaunchTask": "swift: Build Release SedulousMacros (Framework)"
         }
     ]
 }

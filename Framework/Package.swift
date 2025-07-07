@@ -1,6 +1,7 @@
 // swift-tools-version: 6.1
 
 import PackageDescription
+import CompilerPluginSupport
 
 let package = Package(
     name: "Sedulous",
@@ -19,12 +20,33 @@ let package = Package(
     ],
     dependencies: [
         .package(name: "SDL3", path: "../Dependencies/SDL3"),
+        .package(url: "https://github.com/swiftlang/swift-syntax", from: "509.0.0")
     ],
     targets: [
-        .target(name: "SedulousEngine", dependencies: ["SedulousFoundation", "SedulousJobs", "SedulousResources"], path: "Sources/Engine"),
+        .macro(
+            name: "SedulousMacros",
+            dependencies: [
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+                // Add these missing dependencies
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxBuilder", package: "swift-syntax"),
+                .product(name: "SwiftParser", package: "swift-syntax")
+            ],
+            path: "Sources/Macros"
+        ),
+        .target(name: "SedulousEngine", dependencies: [
+                "SedulousFoundation", 
+                "SedulousJobs", 
+                "SedulousResources"
+            ], 
+            path: "Sources/Engine"
+        ),
         .target(name: "SedulousJobs", path: "Sources/Jobs"),
         .target(name: "SedulousResources", dependencies: ["SedulousJobs"], path: "Sources/Resources"),
-        .target(name: "SedulousFoundation", path: "Sources/Foundation"),
+        .target(name: "SedulousFoundation", 
+                dependencies: ["SedulousMacros"], 
+                path: "Sources/Foundation"),
         .target(name: "SedulousPlatform", path: "Sources/Platform"),
         .target(name: "SedulousPlatformSDL3", 
             dependencies: [
