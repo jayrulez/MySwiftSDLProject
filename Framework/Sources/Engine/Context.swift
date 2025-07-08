@@ -40,6 +40,7 @@ public struct ContextUpdateFunctionInfo
 
 public typealias RegisteredUpdateFunctionID = UUID
 
+@MainActor
 public class Context
 {
     public private(set) var scenes: SceneSystem
@@ -66,7 +67,7 @@ public class Context
 	private var updateFunctionsToUnregister: Array<RegisteredUpdateFunctionInfo> = .init()
 
     package init() {
-        jobs = JobSystem()
+        jobs = JobSystem(logger: nil, workerCount: 0)
         resources = ResourceSystem(jobSystem: jobs)
         scenes = SceneSystem()
 
@@ -105,7 +106,7 @@ public class Context
 
     package func update(_ updateTime: UpdateTime) {
         jobs.update()
-        resources.update()
+        //resources.update()
 
         let elapsed = updateTime.elapsedTime
         totalTime = updateTime.totalTime
@@ -147,7 +148,9 @@ public class Context
         }
 
         scenes.shutdown()
-        resources.shutdown()
+        Task{
+            await resources.shutdown()
+        }
         jobs.shutdown()
     }
 

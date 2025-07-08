@@ -21,7 +21,8 @@ let package = Package(
     ],
     dependencies: [
         .package(name: "SDL3", path: "../Dependencies/SDL3"),
-        .package(url: "https://github.com/swiftlang/swift-syntax", from: "509.0.0")
+        .package(url: "https://github.com/swiftlang/swift-syntax", from: "509.0.0"),
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
     ],
     targets: [
         .macro(
@@ -39,12 +40,13 @@ let package = Package(
         .target(name: "SedulousEngine", dependencies: [
                 "SedulousFoundation", 
                 "SedulousJobs", 
-                "SedulousResources"
+                "SedulousResources",
+                .product(name: "Logging", package: "swift-log")
             ], 
             path: "Sources/Engine"
         ),
-        .target(name: "SedulousJobs", path: "Sources/Jobs"),
-        .target(name: "SedulousResources", dependencies: ["SedulousJobs"], path: "Sources/Resources"),
+        .target(name: "SedulousJobs", dependencies: [.product(name: "Logging", package: "swift-log")], path: "Sources/Jobs"),
+        .target(name: "SedulousResources", dependencies: ["SedulousJobs", .product(name: "Logging", package: "swift-log")], path: "Sources/Resources"),
         .target(name: "SedulousFoundation", 
                 dependencies: ["SedulousMacros"], 
                 path: "Sources/Foundation"),
