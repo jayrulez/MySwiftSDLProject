@@ -693,7 +693,7 @@ public class JobSystem {
         isRunning = true
     }
     
-    public func shutdown() async {
+    public func shutdown() {
         guard isRunning else {
             logger?.error("Shutdown called on JobSystem that is not running.")
             return

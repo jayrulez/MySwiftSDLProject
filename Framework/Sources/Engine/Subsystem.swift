@@ -1,3 +1,4 @@
+@MainActor
 open class Subsystem {
     public private(set) var name: String;
     

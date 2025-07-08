@@ -1,5 +1,6 @@
 import SedulousEngine
 
+@MainActor
 public class RendererSubsystem: Subsystem {
     private var meshResourceManager: MeshResourceManager?
     public init() {

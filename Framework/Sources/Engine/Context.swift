@@ -152,10 +152,8 @@ public class Context
         }
 
         scenes.shutdown()
-        Task{
-            await resources.shutdown()
-            await jobs.shutdown()
-        }
+        resources.shutdown()
+        jobs.shutdown()
     }
 
     public func registerUpdateFunction(info: ContextUpdateFunctionInfo) -> RegisteredUpdateFunctionInfo {

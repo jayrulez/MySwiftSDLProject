@@ -29,8 +29,13 @@ class SandboxApplication: Application {
 
             let player: Entity = scene.createEntity(name: "Player")
             let meshComponent = player.addComponent(StaticMeshComponent.self)
-            var mesh = context.resources.addResource(Mesh.createCube(), name: "CubeMesh")
-            meshComponent.mesh = mesh;
+            let meshResult = context.resources.addResource(MeshResource(mesh: Mesh.createCube()))
+            switch meshResult {
+            case .success(let meshHandle):
+                meshComponent.mesh = meshHandle
+            case .failure(let error):
+                print("Failed to add mesh resource: \(error)")
+            }
             meshComponent.material = nil
 
             camera.transform.lookAt(player.transform.position)

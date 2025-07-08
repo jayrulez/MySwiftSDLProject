@@ -137,45 +137,59 @@ private struct ResourceCacheKey: Hashable, Sendable {
     }
 }
 
-// MARK: - Resource Cache
-private actor ResourceCache {
-    // Using strong references - ARC will handle cleanup when resources are no longer needed
+// MARK: - Resource Cache (Synchronous version)
+private class ResourceCache: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "ResourceCache", attributes: .concurrent)
     private var resources: [ResourceCacheKey: AnyObject] = [:]
     
     func set<T: Resource>(key: ResourceCacheKey, resource: T) {
-        resources[key] = resource
+        queue.async(flags: .barrier) {
+            self.resources[key] = resource
+        }
     }
     
     func addIfNotExists<T: Resource>(key: ResourceCacheKey, resource: T) {
-        if resources[key] == nil {
-            resources[key] = resource
+        queue.async(flags: .barrier) {
+            if self.resources[key] == nil {
+                self.resources[key] = resource
+            }
         }
     }
     
     func get<T: Resource>(key: ResourceCacheKey, as type: T.Type) -> T? {
-        return resources[key] as? T
+        return queue.sync {
+            return self.resources[key] as? T
+        }
     }
     
     func remove(key: ResourceCacheKey) {
-        resources.removeValue(forKey: key)
+        queue.async(flags: .barrier) {
+            self.resources.removeValue(forKey: key)
+        }
     }
     
     func remove<T: Resource>(_ resource: T) {
-        let keysToRemove = resources.compactMap { (key, value) in
-            (value as? T)?.id == resource.id ? key : nil
-        }
-        
-        for key in keysToRemove {
-            resources.removeValue(forKey: key)
+        queue.async(flags: .barrier) {
+            let keysToRemove = self.resources.compactMap { (key, value) in
+                (value as? T)?.id == resource.id ? key : nil
+            }
+            
+            for key in keysToRemove {
+                self.resources.removeValue(forKey: key)
+            }
         }
     }
     
     func clear() {
-        resources.removeAll()
+        queue.async(flags: .barrier) {
+            self.resources.removeAll()
+        }
     }
     
     func getAllResources() -> [AnyObject] {
-        return Array(resources.values)
+        return queue.sync {
+            return Array(self.resources.values)
+        }
     }
 }
 
@@ -237,9 +251,9 @@ public class ResourceSystem {
         logger?.info("ResourceSystem started")
     }
     
-    public func shutdown() async {
+    public func shutdown() {
         // Simply clear the cache - ARC will handle cleanup automatically
-        await cache.clear()
+        cache.clear()
         logger?.info("ResourceSystem shut down")
     }
     
@@ -268,7 +282,7 @@ public class ResourceSystem {
     public func addResource<T: Resource>(
         _ resource: T,
         cache: Bool = true
-    ) async -> Result<ResourceHandle<T>, ResourceLoadError> {
+    ) -> Result<ResourceHandle<T>, ResourceLoadError> {
         guard getResourceManager(for: T.self) != nil else {
             return .failure(.managerNotFound)
         }
@@ -276,7 +290,7 @@ public class ResourceSystem {
         if cache {
             let id = resource.id.uuidString
             let cacheKey = ResourceCacheKey(identifier: id, resourceType: T.self)
-            await self.cache.set(key: cacheKey, resource: resource)
+            self.cache.set(key: cacheKey, resource: resource)
         }
         
         return .success(ResourceHandle(resource))
@@ -291,7 +305,7 @@ public class ResourceSystem {
         let cacheKey = ResourceCacheKey(identifier: path, resourceType: T.self)
         
         if fromCache {
-            if let cachedResource = await cache.get(key: cacheKey, as: T.self) {
+            if let cachedResource = cache.get(key: cacheKey, as: T.self) {
                 return .success(ResourceHandle(cachedResource))
             }
         }
@@ -306,7 +320,7 @@ public class ResourceSystem {
         case .success(let resource):
             if let typedResource = resource as? T {
                 if cacheIfLoaded {
-                    await cache.set(key: cacheKey, resource: typedResource)
+                    cache.set(key: cacheKey, resource: typedResource)
                 }
                 return .success(ResourceHandle(typedResource))
             } else {
@@ -335,10 +349,10 @@ public class ResourceSystem {
         return job
     }
     
-    public func unloadResource<T: Resource>(_ handle: ResourceHandle<T>) async {
+    public func unloadResource<T: Resource>(_ handle: ResourceHandle<T>) {
         guard let resource = handle.value else { return }
         
-        await cache.remove(resource)
+        cache.remove(resource)
         
         // Note: We can't check reference count with ARC, but that's actually better!
         // ARC automatically manages memory when there are no more strong references
@@ -351,8 +365,8 @@ public class ResourceSystem {
     }
     
     // Convenience method to unload by path
-    public func unloadResource<T: Resource>(path: String, type: T.Type) async {
+    public func unloadResource<T: Resource>(path: String, type: T.Type) {
         let cacheKey = ResourceCacheKey(identifier: path, resourceType: type)
-        await cache.remove(key: cacheKey)
+        cache.remove(key: cacheKey)
     }
 }
