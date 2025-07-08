@@ -4,7 +4,9 @@ import SedulousPlatformSDL3
 import SedulousEngine
 import SedulousRenderer
 import SedulousFoundation
+import SedulousGeometry
 
+@MainActor
 class SandboxApplication: Application {
     var scene: Scene? = nil
 
@@ -27,7 +29,8 @@ class SandboxApplication: Application {
 
             let player: Entity = scene.createEntity(name: "Player")
             let meshComponent = player.addComponent(StaticMeshComponent.self)
-            meshComponent.mesh = StaticMeshResource()
+            var mesh = context.resources.addResource(Mesh.createCube(), name: "CubeMesh")
+            meshComponent.mesh = mesh;
             meshComponent.material = nil
 
             camera.transform.lookAt(player.transform.position)

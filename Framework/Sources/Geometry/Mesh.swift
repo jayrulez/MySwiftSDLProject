@@ -1,7 +1,7 @@
 import Foundation
 import SedulousFoundation
 
-public class Mesh {
+public class Mesh : Codable {
     private var vertexBuffer: VertexBuffer?
     private var indexBuffer: IndexBuffer?
     private var subMeshes: [SubMesh]
@@ -18,10 +18,118 @@ public class Mesh {
     public var vertices: VertexBuffer? { return vertexBuffer }
     public var indices: IndexBuffer? { return indexBuffer }
     public var meshes: [SubMesh] { return subMeshes }
+
+        enum CodingKeys: String, CodingKey {
+        case vertexData
+        case indexData
+        case subMeshes
+        case bounds
+        case vertexFormat
+    }
+    
+    // Simplified vertex format info for serialization
+    private struct SerializableVertexFormat: Codable {
+        let vertexSize: Int
+        let indexFormat: String
+        let attributes: [VertexAttribute]
+        let positionOffset: Int
+        let normalOffset: Int
+        let uvOffset: Int
+        let colorOffset: Int
+        let tangentOffset: Int
+    }
     
     public init() {
         self.subMeshes = []
         self.bounds = BoundingBox(Vector3.zero, Vector3.zero)
+    }
+    
+    public required init(from decoder: Decoder) throws {
+        self.subMeshes = []
+        self.bounds = BoundingBox(Vector3.zero, Vector3.zero)
+        self.boundsDirty = true
+        self.positionOffset = -1
+        self.normalOffset = -1
+        self.uvOffset = -1
+        self.colorOffset = -1
+        self.tangentOffset = -1
+        
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // Decode vertex format info
+        let format = try container.decode(SerializableVertexFormat.self, forKey: .vertexFormat)
+        
+        // Initialize with decoded format
+        let indexFormat: IndexBuffer.IndexFormat = format.indexFormat == "uint16" ? .uint16 : .uint32
+        initialize(vertexSize: format.vertexSize, indexFormat: indexFormat)
+        
+        // Restore attribute offsets
+        positionOffset = format.positionOffset
+        normalOffset = format.normalOffset
+        uvOffset = format.uvOffset
+        colorOffset = format.colorOffset
+        tangentOffset = format.tangentOffset
+        
+        // Add attributes to vertex buffer
+        for attr in format.attributes {
+            vertexBuffer?.addAttribute(
+                name: attr.name,
+                type: attr.type,
+                offset: attr.offset,
+                size: attr.size
+            )
+        }
+        
+        // Decode vertex data
+        if let vertexData = try container.decodeIfPresent(Data.self, forKey: .vertexData) {
+            vertexBuffer?.loadFromData(vertexData)
+        }
+        
+        // Decode index data
+        if let indexData = try container.decodeIfPresent(Data.self, forKey: .indexData) {
+            indexBuffer?.loadFromData(indexData)
+        }
+        
+        // Decode submeshes
+        subMeshes = try container.decode([SubMesh].self, forKey: .subMeshes)
+        
+        // Decode bounds
+        bounds = try container.decode(BoundingBox.self, forKey: .bounds)
+        boundsDirty = false
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        // Encode vertex format info
+        let format = SerializableVertexFormat(
+            vertexSize: vertexBuffer?.stride ?? 0,
+            indexFormat: indexBuffer?.indexFormat == .uint16 ? "uint16" : "uint32",
+            attributes: vertexBuffer?.getAttributes() ?? [],
+            positionOffset: positionOffset,
+            normalOffset: normalOffset,
+            uvOffset: uvOffset,
+            colorOffset: colorOffset,
+            tangentOffset: tangentOffset
+        )
+        
+        try container.encode(format, forKey: .vertexFormat)
+        
+        // Encode vertex data
+        if let vertexData = vertexBuffer?.getData() {
+            try container.encode(vertexData, forKey: .vertexData)
+        }
+        
+        // Encode index data
+        if let indexData = indexBuffer?.getData() {
+            try container.encode(indexData, forKey: .indexData)
+        }
+        
+        // Encode submeshes
+        try container.encode(subMeshes, forKey: .subMeshes)
+        
+        // Encode bounds (compute if dirty)
+        try container.encode(getBounds(), forKey: .bounds)
     }
     
     // Initialize with a specific vertex format

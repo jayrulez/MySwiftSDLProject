@@ -4,6 +4,8 @@ import SedulousFoundation
 import SedulousJobs
 import SedulousResources
 
+import Logging
+
 public typealias ContextInitializingCallback = (_ initializer: ContextInitializer) -> Void;
 public typealias ContextInitializedCallback = (_ context: Context) -> Void;
 public typealias ContextShuttingDownCallback = (_ context: Context) -> Void;
@@ -47,6 +49,8 @@ public class Context
     public private(set) var jobs: JobSystem  
     public private(set) var resources: ResourceSystem
 
+    private var logger: Logger? = Logger(label: "Sedulous")
+
     package var subsystems: [Subsystem] = []
 
     private var accumulator: Double = 0.0
@@ -67,7 +71,7 @@ public class Context
 	private var updateFunctionsToUnregister: Array<RegisteredUpdateFunctionInfo> = .init()
 
     package init() {
-        jobs = JobSystem(logger: nil, workerCount: 0)
+        jobs = JobSystem(logger: self.logger, workerCount: 0)
         resources = ResourceSystem(jobSystem: jobs)
         scenes = SceneSystem()
 

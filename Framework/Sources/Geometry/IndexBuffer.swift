@@ -75,3 +75,15 @@ public class IndexBuffer {
         }
     }
 }
+
+extension IndexBuffer {
+    public func getData() -> Data {
+        return data
+    }
+    
+    public func loadFromData(_ newData: Data) {
+        data = newData
+        let indexSize = getIndexSize()
+        indexCount = data.count / indexSize
+    }
+}

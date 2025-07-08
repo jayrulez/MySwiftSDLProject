@@ -61,3 +61,18 @@ public class VertexBuffer {
         }
     }
 }
+
+extension VertexBuffer {
+    public func getData() -> Data {
+        return data
+    }
+    
+    public func loadFromData(_ newData: Data) {
+        data = newData
+        vertexCount = data.count / vertexSize
+    }
+    
+    public func getAttributes() -> [VertexAttribute] {
+        return attributes
+    }
+}

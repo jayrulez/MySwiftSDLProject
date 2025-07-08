@@ -1,4 +1,4 @@
-public enum AttributeType {
+public enum AttributeType: Codable {
     case float
     case vec2
     case vec3

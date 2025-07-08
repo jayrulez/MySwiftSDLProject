@@ -1,4 +1,4 @@
-public enum PrimitiveType {
+public enum PrimitiveType: Codable {
     case triangles
     case triangleStrip
     case triangleFan

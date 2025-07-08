@@ -100,6 +100,7 @@ let package = Package(
         .target(name: "SedulousRenderer",
             dependencies: [
                 "SedulousEngine",
+                "SedulousResources",
                 "SedulousGeometry",
             ], 
             path: "Sources/Renderer"

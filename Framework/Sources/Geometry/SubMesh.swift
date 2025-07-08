@@ -1,4 +1,4 @@
-public struct SubMesh {
+public struct SubMesh: Codable {
     public let startIndex: Int
     public let indexCount: Int
     public let materialIndex: Int

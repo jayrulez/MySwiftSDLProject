@@ -1,4 +1,4 @@
-public struct VertexAttribute {
+public struct VertexAttribute: Codable {
     public let name: String
     public let type: AttributeType
     public let offset: Int
