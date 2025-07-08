@@ -5,6 +5,7 @@ import SedulousAudioSDL3
 import SedulousInput
 import SedulousRenderer
 
+@MainActor
 open class Application
 {
     public private(set)var windowSystem: WindowSystem;

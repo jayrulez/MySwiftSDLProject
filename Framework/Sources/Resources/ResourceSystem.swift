@@ -1,16 +1,15 @@
 import Foundation
 import SedulousJobs
 import Logging
-//import Combine
 
 // MARK: - Resource Protocol
-public protocol Resource: AnyObject, Codable {
+public protocol Resource: AnyObject, Codable, Sendable {
     var id: UUID { get }
     var name: String { get set }
 }
 
 // MARK: - Base Resource Implementation
-open class BaseResource: Resource {
+open class BaseResource: Resource, @unchecked Sendable {
     public let id: UUID
     public var name: String
     
@@ -38,7 +37,7 @@ open class BaseResource: Resource {
 }
 
 // MARK: - Resource Handle (Now just a wrapper that provides validation)
-public struct ResourceHandle<T: Resource> {
+public struct ResourceHandle<T: Resource>: Sendable {
     private weak var resource: T?
     
     public var value: T? {
@@ -57,7 +56,7 @@ public struct ResourceHandle<T: Resource> {
 }
 
 // MARK: - Resource Load Error
-public enum ResourceLoadError: Error, LocalizedError {
+public enum ResourceLoadError: Error, LocalizedError, Sendable {
     case unknown
     case managerNotFound
     case notFound
@@ -78,7 +77,7 @@ public enum ResourceLoadError: Error, LocalizedError {
 }
 
 // MARK: - Resource Manager Protocol
-public protocol ResourceManager {
+public protocol ResourceManager: Sendable {
     associatedtype ResourceType: Resource
     
     var resourceType: Any.Type { get }
@@ -89,11 +88,11 @@ public protocol ResourceManager {
 }
 
 // MARK: - Type-erased Resource Manager
-public class AnyResourceManager {
+public class AnyResourceManager: @unchecked Sendable {
     private let _resourceType: Any.Type
-    private let _loadFromPath: (String) -> Result<AnyObject, ResourceLoadError>
-    private let _loadFromData: (Data) -> Result<AnyObject, ResourceLoadError>
-    private let _unload: (AnyObject) -> Void
+    private let _loadFromPath: @Sendable (String) -> Result<AnyObject, ResourceLoadError>
+    private let _loadFromData: @Sendable (Data) -> Result<AnyObject, ResourceLoadError>
+    private let _unload: @Sendable (AnyObject) -> Void
     
     public var resourceType: Any.Type { _resourceType }
     
@@ -128,7 +127,7 @@ public class AnyResourceManager {
 }
 
 // MARK: - Resource Cache Key
-private struct ResourceCacheKey: Hashable {
+private struct ResourceCacheKey: Hashable, Sendable {
     let identifierHash: Int
     let resourceType: ObjectIdentifier
     
@@ -181,8 +180,8 @@ private actor ResourceCache {
 }
 
 // MARK: - Load Resource Job
-public class LoadResourceJob<T: Resource>: ResultJob<Result<ResourceHandle<T>, ResourceLoadError>> {
-    private let resourceSystem: ResourceSystem
+public class LoadResourceJob<T: Resource>: ResultJob<Result<ResourceHandle<T>, ResourceLoadError>>, @unchecked Sendable {
+    private nonisolated let resourceSystem: ResourceSystem
     private let path: String
     private let fromCache: Bool
     private let cacheIfLoaded: Bool
@@ -192,7 +191,7 @@ public class LoadResourceJob<T: Resource>: ResultJob<Result<ResourceHandle<T>, R
         path: String,
         fromCache: Bool = true,
         cacheIfLoaded: Bool = true,
-        onCompletedCallback: ((Result<ResourceHandle<T>, ResourceLoadError>) -> Void)? = nil
+        onCompletedCallback: (@Sendable (Result<ResourceHandle<T>, ResourceLoadError>) -> Void)? = nil
     ) {
         self.resourceSystem = resourceSystem
         self.path = path
@@ -202,7 +201,21 @@ public class LoadResourceJob<T: Resource>: ResultJob<Result<ResourceHandle<T>, R
     }
     
     public override func onExecute() -> Result<ResourceHandle<T>, ResourceLoadError> {
-        return resourceSystem.loadResource(path: path, fromCache: fromCache, cacheIfLoaded: cacheIfLoaded)
+        // Use a blocking async call since we're in a background job
+        let semaphore = DispatchSemaphore(value: 0)
+        var result: Result<ResourceHandle<T>, ResourceLoadError> = .failure(.unknown)
+        
+        Task { @MainActor in
+            result = await self.resourceSystem.loadResourceAsync(
+                path: self.path,
+                fromCache: self.fromCache,
+                cacheIfLoaded: self.cacheIfLoaded
+            )
+            semaphore.signal()
+        }
+        
+        semaphore.wait()
+        return result
     }
 }
 
@@ -212,7 +225,6 @@ public class ResourceSystem {
     private let jobSystem: JobSystem
     private let logger: Logger?
     
-    private let managerQueue = DispatchQueue(label: "resource.managers", attributes: .concurrent)
     private var resourceManagers: [ObjectIdentifier: AnyResourceManager] = [:]
     private let cache = ResourceCache()
     
@@ -232,33 +244,25 @@ public class ResourceSystem {
     }
     
     private func getResourceManager<T: Resource>(for type: T.Type) -> AnyResourceManager? {
-        return managerQueue.sync {
-            resourceManagers[ObjectIdentifier(type)]
-        }
+        return resourceManagers[ObjectIdentifier(type)]
     }
     
     private func getResourceManager(for type: Any.Type) -> AnyResourceManager? {
-        return managerQueue.sync {
-            resourceManagers[ObjectIdentifier(type)]
-        }
+        return resourceManagers[ObjectIdentifier(type)]
     }
     
     public func addResourceManager<T: ResourceManager>(_ manager: T) {
-        managerQueue.async(flags: .barrier) {
-            let typeId = ObjectIdentifier(T.ResourceType.self)
-            if self.resourceManagers[typeId] != nil {
-                self.logger?.warning("A resource manager has already been registered for type '\(T.ResourceType.self)'")
-                return
-            }
-            self.resourceManagers[typeId] = AnyResourceManager(manager)
+        let typeId = ObjectIdentifier(T.ResourceType.self)
+        if resourceManagers[typeId] != nil {
+            logger?.warning("A resource manager has already been registered for type '\(T.ResourceType.self)'")
+            return
         }
+        resourceManagers[typeId] = AnyResourceManager(manager)
     }
     
     public func removeResourceManager<T: ResourceManager>(_ manager: T) {
-        managerQueue.async(flags: .barrier) {
-            let typeId = ObjectIdentifier(T.ResourceType.self)
-            self.resourceManagers.removeValue(forKey: typeId)
-        }
+        let typeId = ObjectIdentifier(T.ResourceType.self)
+        resourceManagers.removeValue(forKey: typeId)
     }
     
     public func addResource<T: Resource>(
@@ -276,45 +280,6 @@ public class ResourceSystem {
         }
         
         return .success(ResourceHandle(resource))
-    }
-    
-    public func loadResource<T: Resource>(
-        path: String,
-        fromCache: Bool = true,
-        cacheIfLoaded: Bool = true
-    ) -> Result<ResourceHandle<T>, ResourceLoadError> {
-        let cacheKey = ResourceCacheKey(identifier: path, resourceType: T.self)
-        
-        if fromCache {
-            Task {
-                if let cachedResource = await cache.get(key: cacheKey, as: T.self) {
-                    return Result<ResourceHandle<T>, ResourceLoadError>.success(ResourceHandle(cachedResource))
-                }
-            }
-        }
-        
-        guard let manager = getResourceManager(for: T.self) else {
-            return .failure(.managerNotFound)
-        }
-        
-        let loadResult = manager.load(from: path)
-        
-        switch loadResult {
-        case .success(let resource):
-            if let typedResource = resource as? T {
-                if cacheIfLoaded {
-                    Task {
-                        await self.cache.set(key: cacheKey, resource: typedResource)
-                    }
-                }
-                return .success(ResourceHandle(typedResource))
-            } else {
-                return .failure(.unexpectedType)
-            }
-            
-        case .failure(let error):
-            return .failure(error)
-        }
     }
     
     // Async version that properly handles cache checks
@@ -357,8 +322,8 @@ public class ResourceSystem {
         path: String,
         fromCache: Bool = true,
         cacheIfLoaded: Bool = true,
-        onCompletedCallback: ((Result<ResourceHandle<T>, ResourceLoadError>) -> Void)? = nil
-    ) -> LoadResourceJob<T> {
+        onCompletedCallback: (@Sendable (Result<ResourceHandle<T>, ResourceLoadError>) -> Void)? = nil
+    ) async -> LoadResourceJob<T> {
         let job = LoadResourceJob<T>(
             resourceSystem: self,
             path: path,
@@ -366,7 +331,7 @@ public class ResourceSystem {
             cacheIfLoaded: cacheIfLoaded,
             onCompletedCallback: onCompletedCallback
         )
-        jobSystem.addJob(job)
+        await jobSystem.addJob(job)
         return job
     }
     

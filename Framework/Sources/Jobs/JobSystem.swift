@@ -3,7 +3,7 @@ import Dispatch
 import Logging
 
 // MARK: - Job States and Flags
-public enum JobState {
+public enum JobState: Sendable {
     case pending
     case running
     case succeeded
@@ -22,13 +22,13 @@ public struct JobFlags: OptionSet, Sendable {
     public static let autoRelease = JobFlags(rawValue: 1 << 1)
 }
 
-public enum JobPriority {
+public enum JobPriority: Sendable {
     case normal
     case critical
 }
 
 // MARK: - Worker States and Flags
-public enum WorkerState {
+public enum WorkerState: Sendable {
     case idle
     case busy
     case paused
@@ -47,7 +47,7 @@ public struct WorkerFlags: OptionSet, Sendable {
 }
 
 // MARK: - Job Base Class
-open class JobBase {
+open class JobBase: @unchecked Sendable {
     public let name: String
     public let flags: JobFlags
     private let stateQueue = DispatchQueue(label: "job.state", attributes: .concurrent)
@@ -104,7 +104,8 @@ open class JobBase {
     }
     
     public func cancel() {
-        stateQueue.async(flags: .barrier) {
+        stateQueue.async(flags: .barrier) { [weak self] in
+            guard let self = self else { return }
             if self._state != .succeeded && self._state != .canceled {
                 self._state = .canceled
                 
@@ -135,13 +136,14 @@ open class JobBase {
             return
         }
         
-        stateQueue.async(flags: .barrier) {
-            self._state = .running
+        stateQueue.async(flags: .barrier) { [weak self] in
+            self?._state = .running
         }
         
         execute()
         
-        stateQueue.async(flags: .barrier) {
+        stateQueue.async(flags: .barrier) { [weak self] in
+            guard let self = self else { return }
             // Job could have been canceled in execute method
             if self._state != .canceled {
                 self._state = .succeeded
@@ -152,14 +154,14 @@ open class JobBase {
     }
     
     private func setState(_ newState: JobState) {
-        stateQueue.async(flags: .barrier) {
-            self._state = newState
+        stateQueue.async(flags: .barrier) { [weak self] in
+            self?._state = newState
         }
     }
 }
 
 // MARK: - Simple Job (no return value)
-open class Job: JobBase {
+open class Job: JobBase, @unchecked Sendable {
     public override init(name: String? = nil, flags: JobFlags = .none, priority: JobPriority = .normal) {
         super.init(name: name, flags: flags, priority: priority)
     }
@@ -174,10 +176,10 @@ open class Job: JobBase {
 }
 
 // MARK: - Generic Job (with return value)
-open class ResultJob<T>: JobBase {
+open class ResultJob<T: Sendable>: JobBase, @unchecked Sendable {
     private var _result: T?
     private let resultQueue = DispatchQueue(label: "job.result", attributes: .concurrent)
-    private let onCompletedCallback: ((T) -> Void)?
+    private let onCompletedCallback: (@Sendable (T) -> Void)?
     
     public var result: T? {
         // Wait for completion and return result
@@ -188,7 +190,7 @@ open class ResultJob<T>: JobBase {
         name: String? = nil,
         flags: JobFlags = .none,
         priority: JobPriority = .normal,
-        onCompletedCallback: ((T) -> Void)? = nil
+        onCompletedCallback: (@Sendable (T) -> Void)? = nil
     ) {
         self.onCompletedCallback = onCompletedCallback
         super.init(name: name, flags: flags, priority: priority)
@@ -196,8 +198,8 @@ open class ResultJob<T>: JobBase {
     
     open override func execute() {
         let result = onExecute()
-        resultQueue.async(flags: .barrier) {
-            self._result = result
+        resultQueue.async(flags: .barrier) { [weak self] in
+            self?._result = result
         }
     }
     
@@ -220,11 +222,11 @@ open class ResultJob<T>: JobBase {
 }
 
 // MARK: - Delegate Jobs
-public class DelegateJob: Job {
-    private let jobClosure: () -> Void
+public class DelegateJob: Job, @unchecked Sendable {
+    private let jobClosure: @Sendable () -> Void
     
     public init(
-        _ jobClosure: @escaping () -> Void,
+        _ jobClosure: @escaping @Sendable () -> Void,
         name: String? = nil,
         flags: JobFlags = .none
     ) {
@@ -237,14 +239,14 @@ public class DelegateJob: Job {
     }
 }
 
-public class DelegateResultJob<T>: ResultJob<T> {
-    private let jobClosure: () -> T
+public class DelegateResultJob<T: Sendable>: ResultJob<T>, @unchecked Sendable {
+    private let jobClosure: @Sendable () -> T
     
     public init(
-        _ jobClosure: @escaping () -> T,
+        _ jobClosure: @escaping @Sendable () -> T,
         name: String? = nil,
         flags: JobFlags = .none,
-        onCompletedCallback: ((T) -> Void)? = nil
+        onCompletedCallback: (@Sendable (T) -> Void)? = nil
     ) {
         self.jobClosure = jobClosure
         super.init(name: name, flags: flags, onCompletedCallback: onCompletedCallback)
@@ -256,7 +258,7 @@ public class DelegateResultJob<T>: ResultJob<T> {
 }
 
 // MARK: - Job Group
-public class JobGroup: Job {
+public class JobGroup: Job, @unchecked Sendable {
     private var jobs: [JobBase] = []
     
     public init(name: String? = nil, flags: JobFlags = .none) {
@@ -291,10 +293,10 @@ public class JobGroup: Job {
 }
 
 // MARK: - Worker Base Class
-internal class Worker {
-    let jobSystem: JobSystem
-    let name: String
-    let flags: WorkerFlags
+internal class Worker: @unchecked Sendable {
+    nonisolated let jobSystem: JobSystem
+    nonisolated let name: String
+    nonisolated let flags: WorkerFlags
     internal let stateQueue = DispatchQueue(label: "worker.state", attributes: .concurrent)
     internal var _state: WorkerState = .paused
     internal var _isRunning = false
@@ -302,11 +304,11 @@ internal class Worker {
     internal let jobsQueue = DispatchQueue(label: "worker.jobs", attributes: .concurrent)
     internal var jobs: [JobBase] = []
     
-    var state: WorkerState {
+    nonisolated var state: WorkerState {
         return stateQueue.sync { _state }
     }
     
-    var isRunning: Bool {
+    nonisolated var isRunning: Bool {
         return stateQueue.sync { _isRunning }
     }
     
@@ -326,9 +328,12 @@ internal class Worker {
     }
     
     func start() {
-        stateQueue.async(flags: .barrier) {
+        stateQueue.async(flags: .barrier) { [weak self] in
+            guard let self = self else { return }
             if self._isRunning {
-                self.jobSystem.logger?.error("Start called on a worker '\(self.name)' that is already running.")
+                Task { @MainActor in
+                    self.jobSystem.logger?.error("Start called on a worker '\(self.name)' that is already running.")
+                }
                 return
             }
             
@@ -342,9 +347,12 @@ internal class Worker {
     }
     
     func stop() {
-        stateQueue.async(flags: .barrier) {
+        stateQueue.async(flags: .barrier) { [weak self] in
+            guard let self = self else { return }
             if !self._isRunning {
-                self.jobSystem.logger?.error("Stop called on a worker '\(self.name)' that is not running.")
+                Task { @MainActor in
+                    self.jobSystem.logger?.error("Stop called on a worker '\(self.name)' that is not running.")
+                }
                 return
             }
             
@@ -356,10 +364,13 @@ internal class Worker {
         
         onStopping()
         
-        jobsQueue.async(flags: .barrier) {
+        jobsQueue.async(flags: .barrier) { [weak self] in
+            guard let self = self else { return }
             // Return remaining jobs to the job system
-            for job in self.jobs {
-                self.jobSystem.addJob(job)
+            Task { @MainActor in
+                for job in self.jobs {
+                    await self.jobSystem.addJob(job)
+                }
             }
             self.jobs.removeAll()
             
@@ -384,14 +395,17 @@ internal class Worker {
     }
     
     func pause() {
-        jobsQueue.async(flags: .barrier) {
+        jobsQueue.async(flags: .barrier) { [weak self] in
+            guard let self = self else { return }
             if self.state == .idle && self.jobs.isEmpty {
                 self.onPausing()
                 self.stateQueue.async(flags: .barrier) {
                     self._state = .paused
                 }
             } else {
-                self.jobSystem.logger?.warning("Pause called on worker that is not idle. The worker will not be paused.")
+                Task { @MainActor in
+                    self.jobSystem.logger?.warning("Pause called on worker that is not idle. The worker will not be paused.")
+                }
             }
         }
     }
@@ -401,12 +415,15 @@ internal class Worker {
     }
     
     func resume() {
-        stateQueue.async(flags: .barrier) {
+        stateQueue.async(flags: .barrier) { [weak self] in
+            guard let self = self else { return }
             if self._state == .paused {
                 self.onResuming()
                 self._state = .idle
             } else {
-                self.jobSystem.logger?.warning("Resume called on worker that is not paused.")
+                Task { @MainActor in
+                    self.jobSystem.logger?.warning("Resume called on worker that is not paused.")
+                }
             }
         }
     }
@@ -420,8 +437,8 @@ internal class Worker {
             resume()
         }
         
-        jobsQueue.async(flags: .barrier) {
-            self.jobs.append(job)
+        jobsQueue.async(flags: .barrier) { [weak self] in
+            self?.jobs.append(job)
         }
         
         return .success(())
@@ -436,8 +453,8 @@ internal class Worker {
             resume()
         }
         
-        jobsQueue.async(flags: .barrier) {
-            self.jobs.append(contentsOf: jobsToQueue)
+        jobsQueue.async(flags: .barrier) { [weak self] in
+            self?.jobs.append(contentsOf: jobsToQueue)
         }
         
         return .success(())
@@ -453,11 +470,12 @@ internal class Worker {
                 break
             }
             
-            stateQueue.async(flags: .barrier) {
-                self._state = .busy
+            stateQueue.async(flags: .barrier) { [weak self] in
+                self?._state = .busy
             }
             
-            let job = jobsQueue.sync(flags: .barrier) {
+            let job: JobBase? = jobsQueue.sync(flags: .barrier) { [weak self] in
+                guard let self = self else { return nil }
                 return jobs.isEmpty ? nil : jobs.removeFirst()
             }
             
@@ -465,24 +483,30 @@ internal class Worker {
             
             if !job.isReady() {
                 // If the job is not ready to run, re-queue with the job system
-                jobSystem.addJob(job)
+                Task { @MainActor in
+                    await jobSystem.addJob(job)
+                }
                 continue
             }
             
-            jobSystem.logger?.info("Worker: \(name) - Running job: \(job.name)")
+            Task { @MainActor in
+                jobSystem.logger?.info("Worker: \(name) - Running job: \(job.name)")
+            }
             job.run()
             
-            jobSystem.handleProcessedJob(job, worker: self)
+            Task { @MainActor in
+                await jobSystem.handleProcessedJob(job, worker: self)
+            }
         }
         
-        stateQueue.async(flags: .barrier) {
-            self._state = .idle
+        stateQueue.async(flags: .barrier) { [weak self] in
+            self?._state = .idle
         }
     }
 }
 
 // MARK: - Background Worker
-internal class BackgroundWorker: Worker {
+internal class BackgroundWorker: Worker, @unchecked Sendable {
     private var workerThread: Thread?
     
     override init(jobSystem: JobSystem, name: String, flags: WorkerFlags = .none) {
@@ -533,7 +557,8 @@ internal class BackgroundWorker: Worker {
     override func update() {
         if let thread = workerThread, thread.isFinished {
             // The worker needs to be stopped
-            stateQueue.async(flags: .barrier) {
+            stateQueue.async(flags: .barrier) { [weak self] in
+                guard let self = self else { return }
                 self._isRunning = false
                 self._state = .dead
             }
@@ -541,9 +566,12 @@ internal class BackgroundWorker: Worker {
         
         if !isRunning {
             // Return any pending jobs to the job system if the worker dies
-            jobsQueue.async(flags: .barrier) {
-                for job in self.jobs {
-                    self.jobSystem.addJob(job)
+            jobsQueue.async(flags: .barrier) { [weak self] in
+                guard let self = self else { return }
+                Task { @MainActor in
+                    for job in self.jobs {
+                        await self.jobSystem.addJob(job)
+                    }
                 }
                 self.jobs.removeAll()
             }
@@ -552,7 +580,7 @@ internal class BackgroundWorker: Worker {
 }
 
 // MARK: - Main Thread Worker
-internal class MainThreadWorker: Worker {
+internal class MainThreadWorker: Worker, @unchecked Sendable {
     init(jobSystem: JobSystem, name: String) {
         super.init(jobSystem: jobSystem, name: name, flags: .persistent)
     }
@@ -587,13 +615,13 @@ public class JobSystem {
     private var workers: [BackgroundWorker] = []
     private var mainThreadWorker: MainThreadWorker?
     
-    private let jobsQueue = DispatchQueue(label: "jobsystem.jobs", attributes: .concurrent)
+    private nonisolated let jobsQueue = DispatchQueue(label: "jobsystem.jobs", attributes: .concurrent)
     private var jobsToRun: [JobBase] = []
     
-    private let completedJobsQueue = DispatchQueue(label: "jobsystem.completed", attributes: .concurrent)
+    private nonisolated let completedJobsQueue = DispatchQueue(label: "jobsystem.completed", attributes: .concurrent)
     private var completedJobs: [JobBase] = []
     
-    private let cancelledJobsQueue = DispatchQueue(label: "jobsystem.cancelled", attributes: .concurrent)
+    private nonisolated let cancelledJobsQueue = DispatchQueue(label: "jobsystem.cancelled", attributes: .concurrent)
     private var cancelledJobs: [JobBase] = []
     
     private var isRunning = false
@@ -609,11 +637,8 @@ public class JobSystem {
     }
     
     deinit {
-        if isRunning {
-            Task {
-                await shutdown()
-            }
-        }
+        // Remove the problematic async shutdown from deinit
+        // The user should call shutdown() explicitly before deallocation
     }
     
     private func createWorkers() {
@@ -631,18 +656,14 @@ public class JobSystem {
     }
     
     private func onJobCompleted(_ job: JobBase, worker: Worker?) {
-        completedJobsQueue.async(flags: .barrier) {
-            self.completedJobs.append(job)
-        }
+        completedJobs.append(job)
     }
     
     private func onJobCancelled(_ job: JobBase, worker: Worker?) {
-        cancelledJobsQueue.async(flags: .barrier) {
-            self.cancelledJobs.append(job)
-        }
+        cancelledJobs.append(job)
     }
     
-    internal func handleProcessedJob(_ job: JobBase, worker: Worker?) {
+    internal func handleProcessedJob(_ job: JobBase, worker: Worker?) async {
         switch job.state {
         case .succeeded:
             onJobCompleted(job, worker: worker)
@@ -672,7 +693,7 @@ public class JobSystem {
         isRunning = true
     }
     
-    public func shutdown() {
+    public func shutdown() async {
         guard isRunning else {
             logger?.error("Shutdown called on JobSystem that is not running.")
             return
@@ -688,13 +709,11 @@ public class JobSystem {
         mainThreadWorker?.stop()
         
         // Cancel remaining jobs
-        jobsQueue.async(flags: .barrier) {
-            for job in self.jobsToRun {
-                job.cancel()
-                self.onJobCancelled(job, worker: nil)
-            }
-            self.jobsToRun.removeAll()
+        for job in jobsToRun {
+            job.cancel()
+            onJobCancelled(job, worker: nil)
         }
+        jobsToRun.removeAll()
         
         clearCompletedJobs()
         clearCancelledJobs()
@@ -710,16 +729,15 @@ public class JobSystem {
         }
         
         // Get jobs to run
-        let jobsToProcess = jobsQueue.sync(flags: .barrier) {
-            let jobs = self.jobsToRun
-            self.jobsToRun.removeAll()
-            return jobs
-        }
+        let jobsToProcess = jobsToRun
+        jobsToRun.removeAll()
         
         for job in jobsToProcess {
             if !job.isReady() {
                 // Requeue job
-                addJob(job)
+                Task {
+                    await addJob(job)
+                }
                 continue
             }
             
@@ -729,7 +747,9 @@ public class JobSystem {
                 if mainThreadWorker?.queueJob(job).isFailure == true {
                     logger?.error("Failed to queue job on main thread worker '\(mainThreadWorker?.name ?? "unknown")'.")
                     // Re-queue the job
-                    addJob(job)
+                    Task {
+                        await addJob(job)
+                    }
                 }
                 continue
             }
@@ -744,12 +764,16 @@ public class JobSystem {
                 default:
                     if worker.queueJob(job).isFailure {
                         logger?.error("Failed to queue job on worker '\(worker.name)'.")
-                        addJob(job) // Re-queue the job
+                        Task {
+                            await addJob(job) // Re-queue the job
+                        }
                     }
                 }
             } else {
                 // No available workers, re-queue the job
-                addJob(job)
+                Task {
+                    await addJob(job)
+                }
             }
         }
         
@@ -786,45 +810,41 @@ public class JobSystem {
         clearCancelledJobs()
     }
     
-    public func addJob(_ job: JobBase) {
+    public func addJob(_ job: JobBase) async {
         guard isRunning else {
             fatalError("JobSystem is not running.")
         }
         
-        jobsQueue.async(flags: .barrier) {
-            self.jobsToRun.append(job)
-        }
+        jobsToRun.append(job)
     }
     
-    public func addJobs(_ jobs: [JobBase]) {
+    public func addJobs(_ jobs: [JobBase]) async {
         guard isRunning else {
             fatalError("JobSystem is not running.")
         }
         
-        jobsQueue.async(flags: .barrier) {
-            self.jobsToRun.append(contentsOf: jobs)
-        }
+        jobsToRun.append(contentsOf: jobs)
     }
     
     public func addJob(
-        _ jobClosure: @escaping () -> Void,
+        _ jobClosure: @escaping @Sendable () -> Void,
         name: String? = nil,
         flags: JobFlags = .none
-    ) {
+    ) async {
         guard isRunning else {
             fatalError("JobSystem is not running.")
         }
         
         let job = DelegateJob(jobClosure, name: name, flags: flags.union(.autoRelease))
-        addJob(job)
+        await addJob(job)
     }
     
-    public func addJob<T>(
-        _ jobClosure: @escaping () -> T,
+    public func addJob<T: Sendable>(
+        _ jobClosure: @escaping @Sendable () -> T,
         name: String? = nil,
         flags: JobFlags = .none,
-        onCompletedCallback: ((T) -> Void)? = nil
-    ) {
+        onCompletedCallback: (@Sendable (T) -> Void)? = nil
+    ) async {
         guard isRunning else {
             fatalError("JobSystem is not running.")
         }
@@ -835,7 +855,7 @@ public class JobSystem {
             flags: flags.union(.autoRelease),
             onCompletedCallback: onCompletedCallback
         )
-        addJob(job)
+        await addJob(job)
     }
     
     private func getAvailableWorker() -> BackgroundWorker? {
@@ -845,14 +865,10 @@ public class JobSystem {
     }
     
     private func clearCancelledJobs() {
-        cancelledJobsQueue.async(flags: .barrier) {
-            self.cancelledJobs.removeAll()
-        }
+        cancelledJobs.removeAll()
     }
     
     private func clearCompletedJobs() {
-        completedJobsQueue.async(flags: .barrier) {
-            self.completedJobs.removeAll()
-        }
+        completedJobs.removeAll()
     }
 }
